@@ -1,36 +1,56 @@
 package com.example.application.security;
 
-import com.example.application.views.login.LoginView;
 import com.vaadin.flow.spring.security.VaadinWebSecurity;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-@EnableWebSecurity
+/**
+ * Configures Spring Security using VaadinWebSecurity helper.
+ * <br><br>
+ *
+ * VaadinWebSecurity provides basic Vaadin security
+ * configuration for the project out of the box. It sets up security rules for a
+ * Vaadin application and restricts all URLs except for public resources and
+ * internal Vaadin URLs to authenticated user.<br><br>
+ *
+ * In this class, we only need to alter the {@code HttpSecurity}
+ * configuration in order to configure authentication support using an OAuth 2.0.
+ *
+ * @see "https://github.com/okta/samples-java-spring/blob/master/custom-login/src/main/java/com/okta/spring/example/HostedLoginCodeFlowExampleApplication.java"
+ */
+//@EnableWebSecurity
 @Configuration
 public class SecurityConfiguration extends VaadinWebSecurity {
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    private static final String LOGIN_URL = "/custom-login";
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
-
-        http.authorizeHttpRequests(
-                authorize -> authorize.requestMatchers(new AntPathRequestMatcher("/images/*.png")).permitAll());
-
-        // Icons from the line-awesome addon
-        http.authorizeHttpRequests(authorize -> authorize
-                .requestMatchers(new AntPathRequestMatcher("/line-awesome/**/*.svg")).permitAll());
-
         super.configure(http);
-        setLoginView(http, LoginView.class);
-    }
 
+        http
+                /*
+                .authorizeHttpRequests((requests) -> requests
+                        .requestMatchers("/", "/custom-login", "/css/**").permitAll()
+                        .anyRequest().authenticated()
+                )*/
+                .exceptionHandling().accessDeniedHandler((req, res, e) -> res.sendRedirect("/403"))
+                .and()
+                .logout().logoutSuccessUrl("/")
+                .and()
+                .oauth2Client()
+                .and()
+                .oauth2Login().redirectionEndpoint().baseUri("/authorization-code/callback*");
+/*
+        http.oauth2Client(Customizer.withDefaults());
+        http.oauth2Login(loginConf -> {
+//            loginConf.loginPage(LOGIN_URL).permitAll();
+            loginConf.redirectionEndpoint(redirectConf ->
+                            redirectConf.baseUri("/authorization-code/callback*")
+            );
+        });*/
+        setOAuth2LoginPage(http, LOGIN_URL);
+    }
 }
+
